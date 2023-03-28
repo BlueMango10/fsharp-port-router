@@ -7,4 +7,3 @@ For now, the clients must send their desired inner port as the first message, bu
 - `Router.fsx` is the actual router program.
 - `Server.fsx` is a simple stream-based echo server which lets you specify a port when starting.
 - `Client.fsx` is a simple client which connects to the router, then lets you specify an inner port to connect to, and finally lets you send messages on the connection and recieve messages from the connection.
-- 
