@@ -9,26 +9,30 @@ open System.Net.Sockets
 open System.IO
 
 let ADDRESS = IPAddress.Any
-let PORT = 5000
+let DEFAULT_PORT = 5000
 
 let INNER_ADDRESS = "localhost"
 
 let INNER_PORT_TIMEOUT = 10 * 1000
-let BLOCK_SIZE = 1024
+let DEFAULT_BLOCK_SIZE = 1024 * 4 // BRULES is the biggest message that needs to be atomic. It is just below 4000 bytes (may change)
 
 [<EntryPoint>]
 let main argv =
 
-    let listener = new TcpListener(ADDRESS, PORT)
+    let port = if argv.Length > 0 then (int argv.[0]) else DEFAULT_PORT // Use argv[1] or default port
+    let blockSize = if argv.Length > 1 then (int argv.[1]) else DEFAULT_BLOCK_SIZE // Use argv[1] or default port
+
+    let listener = new TcpListener(ADDRESS, port)
     listener.Start()
 
-    printfn "Listener started"
+    printfn "Listener started on port %d" port
 
     let relayBytes (fromStream: NetworkStream) (toStream: NetworkStream) =
-        let buffer = Array.zeroCreate BLOCK_SIZE
-        let dataSize = fromStream.Read(buffer, 0, BLOCK_SIZE)
+        let buffer = Array.zeroCreate blockSize
+        let dataSize = fromStream.Read(buffer, 0, blockSize)
+        if dataSize <= 0 then raise (InvalidDataException("No data on stream"))
         toStream.Write(buffer, 0, dataSize)
-        sprintf "%A" buffer
+        (dataSize, sprintf "%A" buffer)
 
     while true do
         let client = listener.AcceptTcpClient()
@@ -78,9 +82,10 @@ let main argv =
                     async { // Relay client messages to server
                         while doRelay do
                             try
-                                let msg = relayBytes stream innerStream
-                                printfn "Client(%d) -> Server(%d): %s" (client.GetHashCode()) innerPort msg
+                                let (size, msg) = relayBytes stream innerStream
+                                printfn "Client(%d) -> Server(%d): %s (%d bytes)" (client.GetHashCode()) innerPort msg size
                             with
+                            | :? InvalidDataException
                             | :? IOException -> printfn "Client(%d) lost" (client.GetHashCode())
                                                 stop()
                     }
@@ -89,9 +94,10 @@ let main argv =
                     async { // Relay server messages to client
                         while doRelay do
                             try
-                                let msg = relayBytes innerStream stream
-                                printfn "Server(%d) -> Client(%d): %s" innerPort (client.GetHashCode()) msg
+                                let (size, msg) = relayBytes innerStream stream
+                                printfn "Server(%d) -> Client(%d): %s (%d bytes)" (client.GetHashCode()) innerPort msg size
                             with
+                            | :? InvalidDataException
                             | :? IOException -> printfn "Server(%d) lost" innerPort
                                                 stop()
                     }
