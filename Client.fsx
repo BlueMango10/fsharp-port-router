@@ -1,11 +1,13 @@
 open System.Net.Sockets
 open System.IO
 
-let ADDRESS = "localhost"
-let PORT = 5000
+printf "address: "
+let address = System.Console.ReadLine()
+printf "port: "
+let port = System.Console.ReadLine() |> int
 
 let client = new TcpClient()
-client.Connect(ADDRESS, PORT)
+client.Connect(address, port)
 
 let stream = client.GetStream()
 let writer = new StreamWriter(stream)
