@@ -1,6 +1,6 @@
 # Port Router
 
-The purpose of this program is to route traffic from incomming tcp connections on one single port to other "inner ports" on the mashine via localost.
+The purpose of this program is to route traffic from incomming tcp connections on one single port to other "inner ports" on the machine via localost.
 
 For now, the clients must send their desired inner port as the first message, but any logic could be used to map the client connections to inner ports.
 
